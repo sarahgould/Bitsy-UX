@@ -1,0 +1,68 @@
+html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    background: #eee;
+}
+
+section {
+    width: 414px;
+    height: 736px;
+    border: 1px solid #444;
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    margin: 5px auto;
+    padding: 10px;
+    background: white;
+}
+
+header {
+    display: flex;
+    width: 100%;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #444;
+}
+header > span {
+    flex-grow: 1;
+    text-align: center;
+}
+
+.contents > * + * {
+    margin-top: 10px;
+}
+.room-grid {
+    background: plum;
+    width: 100%;
+}
+
+/* html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    position: relative;
+
+    margin: 0;
+    padding: 10px;
+
+    background: #eee;
+}
+
+.frame {
+    border: 1px solid #999;
+
+    width: 360px;
+    height: 360px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    padding: 0;
+} */

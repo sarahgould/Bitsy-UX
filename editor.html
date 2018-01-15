@@ -1,0 +1,60 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Bitsy</title>
+
+        <meta name="viewport" content="width=device-width,user-scalable=no">
+        <meta charset="utf-8">
+
+        <link rel="stylesheet" type="text/css" href="style/editor.css">
+    </head>
+
+    <body>
+        <section id="room-editor">
+            <header>
+                <a href="">All Rooms</a>
+                <span><strong>Room 1</strong></span>
+                <button type="button">...</button>
+            </header>
+            <div class="contents">
+                <div class="room-modes">
+                    <label>
+                        <input type="radio" name="room-mode" value="tiles" checked /> Tiles
+                    </label>
+                    <label>
+                        <input type="radio" name="room-mode" value="walls" /> Walls
+                    </label>
+                    <label>
+                        <input type="radio" name="room-mode" value="exits" /> Exits
+                    </label>
+                    <label>
+                        <input type="radio" name="room-mode" value="endings" /> Endings
+                    </label>
+                </div>
+                <div class="room-grid">
+                    <svg id="room-svg" viewBox="0 0 128 128" width="100%"></svg>
+                </div>
+                <div class="drawings">
+                    <button type="button">&LeftArrow;</button>
+                    <label>
+                        <input type="radio" name="drawing" value="tiles" />
+                    </label>
+                    <label>
+                        <input type="radio" name="drawing" value="tiles" />
+                    </label>
+                    <label>
+                        <input type="radio" name="drawing" value="tiles" />
+                    </label>
+                    <label>
+                        <input type="radio" name="drawing" value="tiles" />
+                    </label>
+                    <button type="button">&RightArrow;</button>
+                </div>
+            </div>
+
+        </section>
+
+        <script src="script/editor.js"></script>
+        <script src="script/testGameData.js"></script>
+    </body>
+</html>
