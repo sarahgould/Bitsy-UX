@@ -6,11 +6,36 @@ html {
 body {
     position: relative;
     margin: 0;
-    padding: 0;
+    padding: 20px;
     background: #eee;
 }
 
-section {
+#rooms {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.room {
+    width: 128px;
+    height: 128px;
+    background: white;
+    margin: 10px;
+}
+
+#tiles, #sprites, #items {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.tile, .sprite, .item {
+    width: 16px;
+    height: 16px;
+    background: white;
+    margin: 5px;
+}
+
+/*
+ssection {
     width: 414px;
     height: 736px;
     border: 1px solid #444;
@@ -40,29 +65,4 @@ header > span {
     background: plum;
     width: 100%;
 }
-
-/* html {
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    position: relative;
-
-    margin: 0;
-    padding: 10px;
-
-    background: #eee;
-}
-
-.frame {
-    border: 1px solid #999;
-
-    width: 360px;
-    height: 360px;
-}
-
-h1, h2, h3, h4, h5, h6 {
-    margin: 0;
-    padding: 0;
-} */
+*/

@@ -1,34 +1,86 @@
-const TEST_ROOM = `a,a,a,c,a,c,a,a,a,a,c,a,c,a,a,a
-a,a,a,b,a,b,a,a,a,a,b,a,b,a,a,a
-a,a,o,j,o,j,o,o,o,o,j,o,j,o,a,a
-a,a,0,0,0,0,0,0,0,12,10,1j,17,1a,a,a
-a,a,0,0,1d,0,0,0,0,13,11,16,18,19,a,a
-a,a,0,0,1f,0,12,10,15,0,0,0,0,0,a,a
-a,a,0,0,1f,0,13,11,16,0,0,0,u,v,a,a
-a,a,0,0,1g,0,0,0,0,0,1b,0,y,w,a,a
-a,a,0,0,1i,0,0,0,0,0,1c,0,z,w,a,a
-a,a,0,0,1h,0,0,15,17,1a,0,0,t,x,a,a
-a,a,0,0,1f,0,0,16,18,19,0,0,0,0,a,a
-a,a,0,0,1e,0,0,0,0,0,0,0,0,0,a,a
-a,a,0,0,0,0,0,0,0,12,10,1k,17,1a,a,a
-a,a,0,0,0,0,0,0,0,13,11,16,18,19,a,a
-a,a,a,c,a,c,a,e,g,a,c,a,c,a,a,a
-a,a,a,b,a,b,a,d,f,a,b,a,b,a,a,a`
-
-const TEST_DRAWING = `00000000
-11110000
-00001000
-11110100
-00001100
-00000100
-00000100
-00000100`
-
 class Utility {
     static parsePosition(line) {
         const parts = line.split(',').map(part => parseInt(part))
         if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) return
         return parts
+    }
+
+    static svgRect(x, y) {
+        return `<rect x=${x} y=${y} width="1" height="1" stroke="#000" stroke-width="0.01" />`
+    }
+
+    static drawingToSvg(drawing, x = 0, y = 0) {
+        let elements = ''
+        const data = drawing.frame1 || drawing.data
+        data.forEach((row, localY) => {
+            row.forEach((cell, localX) => {
+                if (cell === '1') elements += Utility.svgRect(x + localX, y + localY)
+            })
+        })
+        const group = `<g>${elements}</g>`
+        return group
+    }
+
+    static roomToSvg(room, tiles) {
+        let elements = ''
+        const tileCache = {}
+        room.data.forEach((row, y) => {
+            row.forEach((cell, x) => {
+                if (cell === '0') return
+                if (!tileCache[cell]) {
+                    const tile = tiles.find(t => t.id === cell)
+                    if (!tile) return
+                    tileCache[tile.id] = tile
+                }
+                elements += Utility.drawingToSvg(tileCache[cell], x * 8, y * 8)
+            })
+        })
+        const group = `<g>${elements}</g>`
+        return group
+    }
+
+    static setSvg(id, content) {
+        const svgEl = document.getElementById(id)
+        if (!svgEl) return
+        svgEl.innerHTML = content
+    }
+
+    static createSvg(parentId, id, className, width, height, content) {
+        const parentEl = document.getElementById(parentId)
+        if (!parentEl) return
+        const container = document.createElement('div')
+        container.id = id
+        container.className = className
+        if (content) container.innerHTML = `<svg width="100%" viewBox="0 0 ${width} ${height}">${content}</svg>`
+        parentEl.appendChild(container)
+    }
+
+    static createSvgRooms(parentId, rooms, tiles) {
+        rooms.forEach(room => {
+            const content = Utility.roomToSvg(room, tiles)
+            Utility.createSvg(parentId, `room-${room.id}`, 'room', 128, 128, content)
+        })
+    }
+
+    static createSvgTiles(parentId, tiles) {
+        tiles.forEach(tile => {
+            const content = Utility.drawingToSvg(tile)
+            Utility.createSvg(parentId, `tile-${tile.id}`, 'tile', 8, 8, content)
+        })
+    }
+
+    static createSvgSprites(parentId, sprites) {
+        sprites.forEach(sprite => {
+            const content = Utility.drawingToSvg(sprite)
+            Utility.createSvg(parentId, `sprite-${sprite.id}`, 'sprite', 8, 8, content)
+        })
+    }
+
+    static createSvgItems(parentId, items) {
+        items.forEach(item => {
+            const content = Utility.drawingToSvg(item)
+            Utility.createSvg(parentId, `item-${item.id}`, 'item', 8, 8, content)
+        })
     }
 }
 
@@ -118,12 +170,15 @@ class Room {
 class Tile {
     constructor() {
         this.id = ''
-        this.data = []
+        this.frame1 = []
+        this.frame2 = []
+        this.isAnimated = false
         this.isWall = false
     }
 
     static parse(lines) {
         const tile = new Tile()
+        let onFirstFrame = true
         lines.forEach(line => {
             if (line.startsWith('TIL ')) {
                 tile.id = line.replace('TIL ', '')
@@ -131,8 +186,16 @@ class Tile {
             else if (line.startsWith('WAL ')) {
                 tile.isWall = (line.replace('WAL ', '') === 'true')
             }
+            else if (line.startsWith('>')) {
+                onFirstFrame = false
+                tile.isAnimated = true
+            }
             else {
-                tile.data.push(line.split(''))
+                if (onFirstFrame) {
+                    tile.frame1.push(line.split(''))
+                } else {
+                    tile.frame2.push(line.split(''))
+                }
             }
         })
         return tile
@@ -234,52 +297,49 @@ class Dialog {
     }
 }
 
-// class Ending extends Dialog {
-//     constructor() {
-//         super()
-//     }
+class Ending {
+    constructor() {
+        this.id = ''
+        this.text = ''
+    }
 
-//     static parse(lines) {
-//         const dialog = new Dialog()
-//         lines.forEach(line => {
-//             if (line.startsWith('DLG ')) {
-//                 dialog.id = line.replace('DLG ', '')
-//             }
-//             else {
-//                 if (dialog.text) {
-//                     dialog.text += '\n' + line
-//                 } else {
-//                     dialog.text = line
-//                 }
-//             }
-//         })
-//         return dialog
-//     }
-// }
+    static parse(lines) {
+        const ending = new Ending()
+        lines.forEach(line => {
+            if (line.startsWith('END ')) {
+                ending.id = line.replace('END ', '')
+            }
+            else {
+                if (ending.text) {
+                    ending.text += '\n' + line
+                } else {
+                    ending.text = line
+                }
+            }
+        })
+        return ending
+    }
+}
 
-// class Variable {
-//     constructor() {
-//         this.id = ''
-//         this.text = ''
-//     }
+class Variable {
+    constructor() {
+        this.id = ''
+        this.value = ''
+    }
 
-//     static parse(lines) {
-//         const dialog = new Dialog()
-//         lines.forEach(line => {
-//             if (line.startsWith('DLG ')) {
-//                 dialog.id = line.replace('DLG ', '')
-//             }
-//             else {
-//                 if (dialog.text) {
-//                     dialog.text += '\n' + line
-//                 } else {
-//                     dialog.text = line
-//                 }
-//             }
-//         })
-//         return dialog
-//     }
-// }
+    static parse(lines) {
+        const variable = new Variable()
+        lines.forEach(line => {
+            if (line.startsWith('VAR ')) {
+                variable.id = line.replace('VAR ', '')
+            }
+            else {
+                variable.value = line
+            }
+        })
+        return variable
+    }
+}
 
 class World {
     constructor() {
@@ -297,93 +357,62 @@ class World {
         const world = new World()
         const chunks = data.split('\n\n')
         chunks.forEach(chunk => {
-            const lines = chunk.split('\n')
-            if (chunk.startsWith('PAL ')) {
+            const lines = chunk
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => !!line)
+            const header = lines[0]
+
+            if (header.startsWith('PAL ')) {
                 world.palettes.push(
                     Palette.parse(lines)
                 )
             }
-            else if (chunk.startsWith('ROOM ')) {
+            else if (header.startsWith('ROOM ')) {
                 world.rooms.push(
                     Room.parse(lines)
                 )
             }
-            else if (chunk.startsWith('TIL ')) {
+            else if (header.startsWith('TIL ')) {
                 world.tiles.push(
                     Tile.parse(lines)
                 )
             }
-            else if (chunk.startsWith('SPR ')) {
+            else if (header.startsWith('SPR ')) {
                 world.sprites.push(
                     Sprite.parse(lines)
                 )
             }
-            else if (chunk.startsWith('ITM ')) {
+            else if (header.startsWith('ITM ')) {
                 world.items.push(
                     Item.parse(lines)
                 )
             }
-            // else if (chunk.startsWith('DLG ')) {
-            //     world.dialogs.push(
-            //         Dialog.parse(lines)
-            //     )
-            // }
-            // else if (chunk.startsWith('END ')) {
-            //     world.endings.push(
-            //         Ending.parse(lines)
-            //     )
-            // }
-            // else if (chunk.startsWith('VAR ')) {
-            //     world.variables.push(
-            //         Variable.parse(lines)
-            //     )
-            // }
+            else if (header.startsWith('DLG ')) {
+                world.dialogs.push(
+                    Dialog.parse(lines)
+                )
+            }
+            else if (header.startsWith('END ')) {
+                world.endings.push(
+                    Ending.parse(lines)
+                )
+            }
+            else if (header.startsWith('VAR ')) {
+                world.variables.push(
+                    Variable.parse(lines)
+                )
+            }
         })
         return world
     }
 }
 
-
-
-const parseRoom = (roomData) => {
-    const rows = roomData.split('\n')
-    const grid = rows.map(row => row.split(','))
-    return grid
+window.onload = () => {
+    const world = World.parse(TEST_GAME)
+    console.log('>> world:', world)
+    Utility.createSvgRooms('rooms', world.rooms, world.tiles)
+    Utility.createSvgTiles('tiles', world.tiles)
+    Utility.createSvgSprites('sprites', world.sprites)
+    Utility.createSvgItems('items', world.items)
 }
-
-const parseDrawing = (drawingData) => {
-    const rows = drawingData.split('\n')
-    const grid = rows.map(row => row.split(''))
-    return grid
-}
-
-const svgRect = (x, y) => {
-    return `<rect x=${x} y=${y} width="1" height="1" stroke="#000" stroke-width="0.01" />`
-}
-
-const drawingToSvg = (drawingGrid, x=0, y=0) => {
-    let elements = ''
-    drawingGrid.forEach((row, localY) => {
-        row.forEach((cell, localX) => {
-            if (cell === '1') elements += svgRect(x+localX, y+localY)
-        })
-    })
-    const group = `<g>${elements}</g>`
-    return group
-}
-
-const roomToSvg = (roomGrid, drawingGrid) => {
-    let elements = ''
-    roomGrid.forEach((row, y) => {
-        row.forEach((cell, x) => {
-            if (cell !== '0') elements += drawingToSvg(drawingGrid, x*8, y*8) // svgRect(x, y)
-        })
-    })
-    const group = `<g>${elements}</g>`
-    return group
-}
-
-const room = document.getElementById('room-svg')
-const drawingGrid = parseDrawing(TEST_DRAWING)
-const roomGrid = parseRoom(TEST_ROOM)
-room.innerHTML = roomToSvg(roomGrid, drawingGrid)
