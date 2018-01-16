@@ -84,260 +84,223 @@ class Utility {
     }
 }
 
-class Palette {
+class Properties {
     constructor() {
-        this.id = ''
-        this.name = ''
+        this.properties = {}
+    }
+
+    set(key, value) {
+        if (!this.properties[key]) this.properties[key] = []
+        this.properties[key].push(value)
+    }
+
+    getFirst(key) {
+        if (!this.properties[key] || !this.properties[key][0]) return null
+        return this.properties[key][0]
+    }
+
+    getAll(key) {
+        return this.properties[key] || []
+    }
+
+    doesExist(key) {
+        return (this.properties[key] != null)
+    }
+}
+
+class GameEntity {
+    constructor(lines) {
+        if (lines) this.parse(lines)
+    }
+
+    parse(lines) {
+        const props = new Properties()
+        const setupFunctions = this.setup()
+        const keys = Object.getOwnPropertyNames(callbacks)
+
+        lines.forEach((line, i) => {
+            const { header, value } = this.parseLine(line)
+            if (keys.includes(header)) {
+                props.set(header, value)
+            } else {
+                props.set('_DATA', line)
+            }
+        })
+
+        keys.forEach(key => {
+            setupFunctions[key](props.getFirst(key), props.getAll(key))
+        })
+
+        this.parseData(props.getAll('_DATA'))
+    }
+
+    parseLine(line) {
+        let header, value, values
+        const lineParts = line.split(' ')
+        if (lineParts.length > 1) {
+            header = lineParts[0]
+            values = lineParts.slice(1)
+        }
+        else {
+            header = '_DATA'
+            values = lineParts
+        }
+        value = values.length > 1 ? values : values[0]
+        return { header, value }
+    }
+
+    parseData(lines) {
+        return
+    }
+
+    init(props) {
+        return
+    }
+}
+
+class Palette extends GameEntity {
+    setup() {
+        return {
+            'PAL': value => { this.id = value },
+            'NAME': value => { this.name = value }
+        }
+    }
+
+    parseData(lines) {
         this.colors = []
-    }
-
-    static parse(lines) {
-        const palette = new Palette()
         lines.forEach(line => {
-            if (line.startsWith('PAL ')) {
-                palette.id = line.replace('PAL ', '')
-            }
-            else if (line.startsWith('NAME ')) {
-                palette.name = line.replace('NAME ', '')
-            }
-            else {
-                const colorParts = line.split(',')
-                if (colorParts.length === 3) {
-                    const r = colorParts[0]
-                    const g = colorParts[1]
-                    const b = colorParts[2]
-                    palette.colors.push({ r, g, b })
-                }
+            const colorParts = line.split(',')
+            if (colorParts.length === 3) {
+                const r = colorParts[0]
+                const g = colorParts[1]
+                const b = colorParts[2]
+                this.colors.push({ r, g, b })
             }
         })
-        return palette
     }
 }
 
-class Room {
-    constructor() {
-        this.id = ''
-        this.name = ''
-        this.paletteId = 0
-        this.data = []
-        this.items = []
-        this.endings = []
-        this.exits = []
+class Room extends GameEntity {
+    setup() {
+        return {
+            'ROOM': value => { this.id = value },
+            'NAME': value => { this.name = value },
+            'PAL': value => { this.paletteId = value },
+            'ITM': (_, values) => { this.items = this.setItems(values) },
+            'END': (_, values) => { this.endings = this.setEndings(values) },
+            'EXT': (_, values) => { this.exits = this.setExits(values) }
+        }
     }
 
-    static parse(lines) {
-        const room = new Room()
-        lines.forEach(line => {
-            if (line.startsWith('ROOM ')) {
-                room.id = line.replace('ROOM ', '')
-            }
-            else if (line.startsWith('NAME ')) {
-                room.name = line.replace('NAME ', '')
-            }
-            else if (line.startsWith('PAL ')) {
-                room.paletteId = line.replace('PAL ', '')
-            }
-            else if (line.startsWith('ITM ')) {
-                const itemParts = line.replace('ITM ', '').split(' ')
-                if (itemParts.length < 2) return
-                const id = itemParts[0]
-                const position = Utility.parsePosition(itemParts[1])
-                room.items.push({ id, position })
-            }
-            else if (line.startsWith('END ')) {
-                const endingParts = line.replace('END ', '').split(' ')
-                if (endingParts.length < 2) return
-                const endingId = endingParts[0]
-                const position = Utility.parsePosition(endingParts[1])
-                room.endings.push({ endingId, position })
-            }
-            else if (line.startsWith('EXT ')) {
-                const exitParts = line.replace('EXT ', '').split(' ')
-                if (exitParts.length < 3) return
-                const position = Utility.parsePosition(exitParts[0])
-                const roomId = exitParts[1]
-                const enterPosition = Utility.parsePosition(exitParts[2])
-                room.exits.push({ roomId, position, enterPosition })
-            }
-            else {
-                room.data.push(line.split(','))
-            }
-        })
-        return room
+    setItems(items) {
+        return items.map(item => ({
+            id: item[0],
+            position: Utility.parsePosition(item[1])
+        }))
+    }
+
+    setEndings(endings) {
+        return endings.map(ending => ({
+            endingId: ending[0],
+            position: Utility.parsePosition(ending[1])
+        }))
+    }
+
+    setExits(exits) {
+        return exits.map(exit => ({
+            position: Utility.parsePosition(exit[0]),
+            roomId: exit[1],
+            enterPosition: Utility.parsePosition(exit[2])
+        }))
+    }
+
+    parseData(lines) {
+        this.data = lines.map(line => line.split(','))
     }
 }
 
-class Tile {
-    constructor() {
-        this.id = ''
-        this.frame1 = []
-        this.frame2 = []
-        this.isAnimated = false
-        this.isWall = false
-    }
-
-    static parse(lines) {
-        const tile = new Tile()
-        let onFirstFrame = true
-        lines.forEach(line => {
-            if (line.startsWith('TIL ')) {
-                tile.id = line.replace('TIL ', '')
-            }
-            else if (line.startsWith('WAL ')) {
-                tile.isWall = (line.replace('WAL ', '') === 'true')
-            }
-            else if (line.startsWith('>')) {
-                onFirstFrame = false
-                tile.isAnimated = true
-            }
-            else {
-                if (onFirstFrame) {
-                    tile.frame1.push(line.split(''))
-                } else {
-                    tile.frame2.push(line.split(''))
-                }
-            }
-        })
-        return tile
+class Drawing extends GameEntity {
+    parseData(lines) {
+        const frameSeparator = lines.findIndex(line => line === '>')
+        this.isAnimated = (frameSeparator >= 0)
+        const frame1Lines = this.isAnimated ? lines.slice(0, frameSeparator) : lines
+        const frame2Lines = this.isAnimated ? lines.slice(frameSeparator + 1) : []
+        this.frame1 = frame1Lines.map(line => line.split(''))
+        this.frame2 = frame2Lines.map(line => line.split(''))
     }
 }
 
-class Sprite {
-    constructor() {
-        this.id = ''
-        this.frame1 = []
-        this.frame2 = []
-        this.isAnimated = false
-        this.roomId = ''
-        this.position = []
-        this.dialogId = ''
-    }
-
-    static parse(lines) {
-        const sprite = new Sprite()
-        let onFirstFrame = true
-        lines.forEach(line => {
-            if (line.startsWith('SPR ')) {
-                sprite.id = line.replace('SPR ', '')
-            }
-            else if (line.startsWith('POS ')) {
-                const lineParts = line.replace('POS ', '').split(' ')
-                if (lineParts.length < 2) return
-                sprite.roomId = lineParts[0]
-                sprite.position = Utility.parsePosition(lineParts[1])
-            }
-            else if (line.startsWith('DLG ')) {
-                sprite.dialogId = line.replace('DLG ', '')
-            }
-            else if (line.startsWith('>')) {
-                onFirstFrame = false
-                sprite.isAnimated = true
-            }
-            else {
-                if (onFirstFrame) {
-                    sprite.frame1.push(line.split(''))
-                } else {
-                    sprite.frame2.push(line.split(''))
-                }
-            }
-        })
-        return sprite
+class Tile extends Drawing {
+    setup() {
+        return {
+            'TIL': value => { this.id = value },
+            'WAL': value => { this.isWall = (value === 'true') }
+        }
     }
 }
 
-class Item {
-    constructor() {
-        this.id = ''
-        this.name = ''
-        this.data = []
-        this.dialogId = ''
+class Sprite extends Drawing {
+    setup() {
+        return {
+            'SPR': value => { this.id = value },
+            'DLG': value => { this.dialogId = value },
+            'POS': value => { if (value) this.setPosition(value) }
+        }
     }
 
-    static parse(lines) {
-        const item = new Item()
-        lines.forEach(line => {
-            if (line.startsWith('ITM ')) {
-                item.id = line.replace('ITM ', '')
-            }
-            else if (line.startsWith('NAME ')) {
-                item.name = line.replace('NAME ', '')
-            }
-            else if (line.startsWith('DLG ')) {
-                item.dialogId = line.replace('DLG ', '')
-            }
-            else {
-                item.data.push(line.split(''))
-            }
-        })
-        return item
+    setPosition(position) {
+        this.roomId = position[0]
+        this.position = Utility.parsePosition(position[1])
     }
 }
 
-class Dialog {
-    constructor() {
-        this.id = ''
-        this.text = ''
-    }
-
-    static parse(lines) {
-        const dialog = new Dialog()
-        lines.forEach(line => {
-            if (line.startsWith('DLG ')) {
-                dialog.id = line.replace('DLG ', '')
-            }
-            else {
-                if (dialog.text) {
-                    dialog.text += '\n' + line
-                } else {
-                    dialog.text = line
-                }
-            }
-        })
-        return dialog
+class Item extends Drawing {
+    setup() {
+        return {
+            'ITM': value => { this.id = value },
+            'DLG': value => { this.dialogId = value },
+            'NAME': value => { this.name = value }
+        }
     }
 }
 
-class Ending {
-    constructor() {
-        this.id = ''
-        this.text = ''
+class Dialog extends GameEntity {
+    setup() {
+        return {
+            'DLG': value => { this.id = value }
+        }
     }
 
-    static parse(lines) {
-        const ending = new Ending()
-        lines.forEach(line => {
-            if (line.startsWith('END ')) {
-                ending.id = line.replace('END ', '')
-            }
-            else {
-                if (ending.text) {
-                    ending.text += '\n' + line
-                } else {
-                    ending.text = line
-                }
-            }
-        })
-        return ending
+    parseData(lines) {
+        if (lines.length === 0) this.text = ''
+        if (lines.length === 1) this.text = lines[0]
+        if (lines.length > 1) this.text = lines
     }
 }
 
-class Variable {
-    constructor() {
-        this.id = ''
-        this.value = ''
+class Ending extends GameEntity {
+    setup() {
+        return {
+            'END': value => { this.id = value }
+        }
     }
 
-    static parse(lines) {
-        const variable = new Variable()
-        lines.forEach(line => {
-            if (line.startsWith('VAR ')) {
-                variable.id = line.replace('VAR ', '')
-            }
-            else {
-                variable.value = line
-            }
-        })
-        return variable
+    parseData(lines) {
+        if (lines.length === 0) this.text = ''
+        if (lines.length === 1) this.text = lines[0]
+        if (lines.length > 1) this.text = lines
+    }
+}
+
+class Variable extends GameEntity {
+    setup() {
+        return {
+            'VAR': value => { this.id = value }
+        }
+    }
+
+    parseData(lines) {
+        this.value = lines.length > 0 ? lines[0] : ''
     }
 }
 
@@ -365,42 +328,42 @@ class World {
 
             if (header.startsWith('PAL ')) {
                 world.palettes.push(
-                    Palette.parse(lines)
+                    new Palette(lines)
                 )
             }
             else if (header.startsWith('ROOM ')) {
                 world.rooms.push(
-                    Room.parse(lines)
+                    new Room(lines)
                 )
             }
             else if (header.startsWith('TIL ')) {
                 world.tiles.push(
-                    Tile.parse(lines)
+                    new Tile(lines)
                 )
             }
             else if (header.startsWith('SPR ')) {
                 world.sprites.push(
-                    Sprite.parse(lines)
+                    new Sprite(lines)
                 )
             }
             else if (header.startsWith('ITM ')) {
                 world.items.push(
-                    Item.parse(lines)
+                    new Item(lines)
                 )
             }
             else if (header.startsWith('DLG ')) {
                 world.dialogs.push(
-                    Dialog.parse(lines)
+                    new Dialog(lines)
                 )
             }
             else if (header.startsWith('END ')) {
                 world.endings.push(
-                    Ending.parse(lines)
+                    new Ending(lines)
                 )
             }
             else if (header.startsWith('VAR ')) {
                 world.variables.push(
-                    Variable.parse(lines)
+                    new Variable(lines)
                 )
             }
         })
