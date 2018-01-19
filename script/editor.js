@@ -116,7 +116,7 @@ class GameEntity {
     parse(lines) {
         const props = new Properties()
         const setupFunctions = this.setup()
-        const keys = Object.getOwnPropertyNames(callbacks)
+        const keys = Object.getOwnPropertyNames(setupFunctions)
 
         lines.forEach((line, i) => {
             const { header, value } = this.parseLine(line)
@@ -378,4 +378,14 @@ window.onload = () => {
     Utility.createSvgTiles('tiles', world.tiles)
     Utility.createSvgSprites('sprites', world.sprites)
     Utility.createSvgItems('items', world.items)
+
+    const items = document.getElementsByClassName('items')[0].children
+    const targets = document.getElementsByClassName('targets')[0].children
+    Draggable.setup(items, targets,
+        (el, target, draggable) => {
+            target.className += ' filled'
+            target.style.background = el.style.background
+            draggable.disable()
+        }
+    )
 }
