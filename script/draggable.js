@@ -4,9 +4,17 @@ class Draggable {
         this.targets = targets.length ? Array.prototype.slice.call(targets) : [targets]
         this.onDrop = onDrop
 
+        this.mousedown = this.mousedown.bind(this)
+        this.mousemove = this.mousemove.bind(this)
+        this.mouseup = this.mouseup.bind(this)
+
+        this.touchstart = this.touchstart.bind(this)
+        this.touchmove = this.touchmove.bind(this)
+        this.touchstop = this.touchstop.bind(this)
+
         this.el.className += ' draggable'
-        this.el.addEventListener('mousedown', this.mousedown.bind(this))
-        this.el.addEventListener('touchstart', this.touchstart.bind(this))
+        this.el.addEventListener('mousedown', this.mousedown)
+        this.el.addEventListener('touchstart', this.touchstart)
     }
 
     static setup(el, targets, onDrop) {
@@ -63,7 +71,9 @@ class Draggable {
             )
         })
 
-        if (dropTarget && this.onDrop) this.onDrop(this.el, dropTarget, this)
+        if (dropTarget && this.onDrop) {
+            this.onDrop(this.el, dropTarget, x, y, this)
+        }
     }
 
     // ------------
@@ -73,8 +83,8 @@ class Draggable {
     mousedown(event) {
         this.start(event.clientX, event.clientY)
 
-        document.addEventListener('mousemove', this.mousemove.bind(this))
-        document.addEventListener('mouseup', this.mouseup.bind(this))
+        document.addEventListener('mousemove', this.mousemove)
+        document.addEventListener('mouseup', this.mouseup)
     }
 
     mousemove(event) {
@@ -96,9 +106,9 @@ class Draggable {
         const touch = event.targetTouches[0]
         this.start(touch.clientX, touch.clientY)
 
-        document.addEventListener('touchmove', this.touchmove.bind(this))
-        document.addEventListener('touchend', this.touchstop.bind(this))
-        document.addEventListener('touchcancel', this.touchstop.bind(this))
+        document.addEventListener('touchmove', this.touchmove)
+        document.addEventListener('touchend', this.touchstop)
+        document.addEventListener('touchcancel', this.touchstop)
     }
 
     touchmove(event) {

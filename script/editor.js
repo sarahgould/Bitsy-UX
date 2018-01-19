@@ -382,7 +382,7 @@ window.onload = () => {
     const items = document.getElementsByClassName('items')[0].children
     const targets = document.getElementsByClassName('targets')[0].children
     Draggable.setup(items, targets,
-        (el, target, draggable) => {
+        (el, target, x, y, draggable) => {
             target.className += ' filled'
             target.style.background = el.style.background
             draggable.disable()
