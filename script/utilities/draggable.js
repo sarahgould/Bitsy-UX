@@ -133,8 +133,8 @@ class Draggable {
         this.dup = this.el.cloneNode(true)
         this.dup.id = 'dragDropDup'
         this.dup.style.position = 'absolute'
-        this.dup.style.left = this.el.offsetLeft + 10 + 'px'
-        this.dup.style.top = this.el.offsetTop + 10 + 'px'
+        this.dup.style.left = this.el.offsetLeft + 'px'
+        this.dup.style.top = this.el.offsetTop + 'px'
         this.el.parentElement.appendChild(this.dup)
     }
 
