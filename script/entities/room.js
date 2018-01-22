@@ -42,7 +42,13 @@ class Room extends Entity {
     }
 
     draw(world) {
+        const openTag = '<g>'
+        const closeTag = '</g>'
+
         const palette = world.palettes.find(p => p.id === this.paletteId)
+        const backgroundColor = palette.colors[0]
+
+        const background = Svg.rect(0, 0, ROOM_WIDTH * SQUARE_WIDTH, ROOM_HEIGHT * SQUARE_HEIGHT, backgroundColor)
 
         let contents = ''
         this.data.forEach((row, y) => {
@@ -50,25 +56,20 @@ class Room extends Entity {
                 contents += this.drawSquare(x, y, palette, world)
             })
         })
-        return contents
+
+        return (openTag + background + contents + closeTag)
     }
 
     drawSquare(x, y, palette, world) {
+        const openTag = `<g transform="translate(${x * SQUARE_WIDTH}, ${y * SQUARE_HEIGHT})">`
+        const closeTag = '</g>'
+
         const { tile, sprite, item } = this.getTile(x, y, world)
         const thingToDraw = sprite || item || tile
+        const color = sprite || item ? palette.colors[2] : palette.colors[1]
+        const contents = thingToDraw ? thingToDraw.draw(color) : ''
 
-        const backgroundColor = palette.colors[0]
-        const foregroundColor = sprite || item ? palette.colors[2] : palette.colors[1]
-
-        let contents = ''
-
-        const background = Svg.rect(0, 0, SQUARE_WIDTH, SQUARE_HEIGHT, backgroundColor)
-        contents += background
-
-        if (thingToDraw) contents += thingToDraw.draw(foregroundColor)
-
-        const group = `<g transform="translate(${x * SQUARE_WIDTH}, ${y * SQUARE_HEIGHT})">${contents}</g>`
-        return group
+        return (openTag + contents + closeTag)
     }
 
     getTile(x, y, world) {

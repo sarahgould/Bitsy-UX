@@ -9,15 +9,23 @@ class Drawing extends Entity {
     }
 
     draw(color) {
-        let contents = ''
+        const openTag = `<g fill="${Svg.colorCode(color)}">`
+        const closeTag = '</g>'
 
+        let contents = ''
         this.frame1.forEach((row, y) => {
             row.forEach((cell, x) => {
-                if (cell === '1') contents += Svg.pixel(x, y, color)
+                if (this.isAnimated && cell !== this.frame2[y][x]) {
+                    if (cell === '1') contents += Svg.pixel(x, y, 1)
+                    if (this.frame2[y][x] === '1') contents += Svg.pixel(x, y, 2)
+                }
+                else {
+                    if (cell === '1') contents += Svg.pixel(x, y)
+                }
             })
         })
 
-        return contents
+        return (openTag + contents + closeTag)
     }
 }
 
